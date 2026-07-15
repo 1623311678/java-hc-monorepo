@@ -1,0 +1,74 @@
+# ==================== Java ====================
+# Maven
+target/
+*.jar
+*.war
+*.ear
+*.class
+*.log
+hs_err_pid*
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Eclipse
+.project
+.classpath
+.settings/
+bin/
+
+# VS Code Java
+.factorypath
+
+# ==================== Node.js / Next.js ====================
+node_modules/
+.next/
+out/
+frontend/node_modules/
+frontend/.next/
+
+# Build 输出
+frontend/.vercel
+
+# ==================== 环境变量 (含密码!) ====================
+.env
+.env.local
+.env.*.local
+*.env.bak
+
+# ==================== Docker / 运维 ====================
+# Docker 数据卷 (在服务器上, 不入库)
+mysql-data/
+redis-data/
+rabbitmq-data/
+es-data/
+nacos-data/
+
+# 备份文件
+backup_*.sql
+*.sql.bak
+
+# ==================== OS 生成文件 ====================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ==================== 日志 ====================
+logs/
+*.log
+*.log.*
+
+# ==================== 其他 ====================
+# 测试覆盖率报告
+coverage/
+*.lcov
+
+# 临时文件
+tmp/
+temp/
