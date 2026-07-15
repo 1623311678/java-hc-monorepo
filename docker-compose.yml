@@ -1,0 +1,301 @@
+# ===== 电商高并发微服务 — 全栈基础设施 =====
+# 使用: docker compose up -d
+# 依赖: 先 cp .env.example .env 并修改密码
+
+services:
+  # ==================== 注册中心 + 配置中心 ====================
+  nacos:
+    image: nacos/nacos-server:v2.3.2
+    container_name: hc-nacos
+    environment:
+      MODE: standalone
+      NACOS_AUTH_ENABLE: "true"
+      NACOS_AUTH_IDENTITY_KEY: nacos
+      NACOS_AUTH_IDENTITY_VALUE: nacos
+      NACOS_AUTH_TOKEN: SecretKey012345678901234567890123456789012345678901234567890123456789
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    volumes:
+      - nacos-data:/home/nacos/data
+    restart: always
+    networks:
+      - hc-net
+
+  # ==================== Sentinel 限流控制台 ====================
+  sentinel:
+    image: bladex/sentinel-dashboard:1.8.7
+    container_name: hc-sentinel
+    ports:
+      - "8070:8070"
+    environment:
+      - SENTINEL_USERNAME=sentinel
+      - SENTINEL_PASSWORD=sentinel
+    restart: always
+    networks:
+      - hc-net
+
+  # ==================== MySQL (每服务独立库) ====================
+  mysql:
+    image: mysql:8.0
+    container_name: hc-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-root}
+      MYSQL_DATABASE: hc_product
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./deploy/docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=256M
+      --max-connections=500
+    restart: always
+    networks:
+      - hc-net
+
+  # ==================== Redis (缓存 + 分布式锁 + 会话) ====================
+  redis:
+    image: redis:7-alpine
+    container_name: hc-redis
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+    volumes:
+      - redis-data:/data
+    restart: always
+    networks:
+      - hc-net
+
+  # ==================== RabbitMQ (异步消息) ====================
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: hc-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin123}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: always
+    networks:
+      - hc-net
+
+  # ==================== Elasticsearch (商品搜索) ====================
+  elasticsearch:
+    image: elasticsearch:8.13.4
+    container_name: hc-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms256m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    restart: always
+    networks:
+      - hc-net
+
+  # ==================== Seata (分布式事务) ====================
+  seata:
+    image: seataio/seata-server:1.7.1
+    container_name: hc-seata
+    ports:
+      - "7091:7091"
+      - "8091:8091"
+    environment:
+      SEATA_IP: seata
+    volumes:
+      - ./deploy/docker/seata/registry.conf:/seata-server/resources/registry.conf
+    depends_on:
+      - nacos
+    restart: always
+    networks:
+      - hc-net
+
+  # ==================== Nginx (反向代理) ====================
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: hc-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - gateway
+      - frontend
+    restart: always
+    networks:
+      - hc-net
+
+  # ==================== Spring Cloud Gateway ====================
+  gateway:
+    build:
+      context: ./services/gateway
+      dockerfile: ../../deploy/docker/Dockerfile.java
+    container_name: hc-gateway
+    environment:
+      NACOS_ADDR: nacos:8848
+      SENTINEL_DASHBOARD: sentinel:8070
+      JWT_SECRET: ${JWT_SECRET:-mySecretKeyForJwtTokenGenerationMustBe256BitsLong2024!}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - nacos
+      - redis
+    restart: always
+    networks:
+      - hc-net
+
+  # ==================== 商品服务 ====================
+  hc-product:
+    build:
+      context: ./services/product
+      dockerfile: ../../deploy/docker/Dockerfile.java
+    container_name: hc-product
+    environment:
+      NACOS_ADDR: nacos:8848
+      MYSQL_HOST: mysql
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-root}
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-admin123}
+      ES_HOST: elasticsearch
+      SENTINEL_DASHBOARD: sentinel:8070
+    ports:
+      - "8082:8082"
+    depends_on:
+      - mysql
+      - redis
+      - rabbitmq
+      - nacos
+    restart: always
+    networks:
+      - hc-net
+
+  # ==================== 订单服务 ====================
+  hc-order:
+    build:
+      context: ./services/order
+      dockerfile: ../../deploy/docker/Dockerfile.java
+    container_name: hc-order
+    environment:
+      NACOS_ADDR: nacos:8848
+      MYSQL_HOST: mysql
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-root}
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-admin123}
+      SENTINEL_DASHBOARD: sentinel:8070
+    ports:
+      - "8084:8084"
+    depends_on:
+      - mysql
+      - redis
+      - rabbitmq
+      - nacos
+    restart: always
+    networks:
+      - hc-net
+
+  # ==================== 支付服务 ====================
+  hc-payment:
+    build:
+      context: ./services/payment
+      dockerfile: ../../deploy/docker/Dockerfile.java
+    container_name: hc-payment
+    environment:
+      NACOS_ADDR: nacos:8848
+      MYSQL_HOST: mysql
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-root}
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-admin123}
+    ports:
+      - "8085:8085"
+    depends_on:
+      - mysql
+      - redis
+      - rabbitmq
+      - nacos
+    restart: always
+    networks:
+      - hc-net
+
+  # ==================== 用户服务 ====================
+  hc-user:
+    build:
+      context: ./services/user
+      dockerfile: ../../deploy/docker/Dockerfile.java
+    container_name: hc-user
+    environment:
+      NACOS_ADDR: nacos:8848
+      MYSQL_HOST: mysql
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-root}
+      REDIS_HOST: redis
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mysql
+      - redis
+      - nacos
+    restart: always
+    networks:
+      - hc-net
+
+  # ==================== 购物车服务 ====================
+  hc-cart:
+    build:
+      context: ./services/cart
+      dockerfile: ../../deploy/docker/Dockerfile.java
+    container_name: hc-cart
+    environment:
+      NACOS_ADDR: nacos:8848
+      REDIS_HOST: redis
+    ports:
+      - "8083:8083"
+    depends_on:
+      - redis
+      - nacos
+    restart: always
+    networks:
+      - hc-net
+
+  # ==================== Next.js 前端 ====================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hc-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost/api
+    ports:
+      - "3000:3000"
+    restart: always
+    networks:
+      - hc-net
+
+# ==================== 数据卷 ====================
+volumes:
+  mysql-data:
+  redis-data:
+  rabbitmq-data:
+  es-data:
+  nacos-data:
+
+# ==================== 网络 ====================
+networks:
+  hc-net:
+    driver: bridge

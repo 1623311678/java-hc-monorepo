@@ -1,0 +1,85 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: hc-gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:nacos:8848}
+        namespace: ${NACOS_NAMESPACE:dev}
+      config:
+        server-addr: ${NACOS_ADDR:nacos:8848}
+        file-extension: yml
+        namespace: ${NACOS_NAMESPACE:dev}
+    gateway:
+      # ===== 路由规则 =====
+      routes:
+        # 用户服务
+        - id: hc-user
+          uri: lb://hc-user
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - StripPrefix=1
+
+        # 商品服务
+        - id: hc-product
+          uri: lb://hc-product
+          predicates:
+            - Path=/api/product/**
+          filters:
+            - StripPrefix=1
+
+        # 购物车服务
+        - id: hc-cart
+          uri: lb://hc-cart
+          predicates:
+            - Path=/api/cart/**
+          filters:
+            - StripPrefix=1
+
+        # 订单服务
+        - id: hc-order
+          uri: lb://hc-order
+          predicates:
+            - Path=/api/order/**
+          filters:
+            - StripPrefix=1
+
+        # 支付服务
+        - id: hc-payment
+          uri: lb://hc-payment
+          predicates:
+            - Path=/api/payment/**
+          filters:
+            - StripPrefix=1
+
+      # ===== 跨域配置 =====
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+
+    # Sentinel 限流
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:sentinel:8080}
+      eager: true
+
+# ===== JWT 鉴权 =====
+jwt:
+  secret: ${JWT_SECRET:mySecretKeyForJwtTokenGenerationMustBe256BitsLong2024!}
+  expiration: 86400000  # 24h
+
+# ===== 白名单 (不需要鉴权的路径) =====
+gateway:
+  ignore-urls:
+    - /api/user/login
+    - /api/user/register
+    - /api/product/**
+    - /api/payment/callback/**

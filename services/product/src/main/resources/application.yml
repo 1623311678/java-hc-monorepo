@@ -1,0 +1,80 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: hc-product
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:mysql}:3306/hc_product?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 3000
+      # 监控页面
+      stat-view-servlet:
+        enabled: true
+        url-pattern: /druid/*
+
+  # Redis — 商品缓存 + 库存预热
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 5
+
+  # RabbitMQ — 库存扣减消息
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASSWORD:admin123}
+
+  # Elasticsearch — 商品搜索
+  elasticsearch:
+    uris: http://${ES_HOST:elasticsearch}:9200
+
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:nacos:8848}
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:sentinel:8080}
+
+# MyBatis Plus
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# Redisson (分布式锁)
+redisson:
+  address: redis://${REDIS_HOST:redis}:${REDIS_PORT:6379}
+
+# Seata
+seata:
+  enabled: true
+  application-id: hc-product
+  tx-service-group: hc-tx-group
+  service:
+    vgroup-mapping:
+      hc-tx-group: default
+  registry:
+    type: nacos
+    nacos:
+      server-addr: ${NACOS_ADDR:nacos:8848}
