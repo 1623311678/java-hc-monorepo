@@ -5,6 +5,7 @@ import com.hc.model.ProductSku;
 import com.hc.repository.ProductSkuMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
 import org.redisson.api.RSemaphore;
 import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -51,7 +52,8 @@ public class StockService extends ServiceImpl<ProductSkuMapper, ProductSku> {
             // ===== 第 2 级: Redisson 分布式锁 =====
             // 防止同一 SKU 并发扣减导致超卖
             String lockKey = LOCK_KEY + skuId;
-            boolean locked = redissonClient.tryLock(lockKey, 3, TimeUnit.SECONDS);
+            RLock lock = redissonClient.getLock(lockKey);
+            boolean locked = lock.tryLock(0, 3, TimeUnit.SECONDS);
             if (!locked) {
                 log.warn("[秒杀] 获取分布式锁失败 — skuId:{}", skuId);
                 semaphore.release(count); // 归还信号量
@@ -71,7 +73,7 @@ public class StockService extends ServiceImpl<ProductSkuMapper, ProductSku> {
                     return false;
                 }
             } finally {
-                redissonClient.unlock(lockKey);
+                lock.unlock();
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

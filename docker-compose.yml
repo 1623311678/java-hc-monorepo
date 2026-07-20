@@ -6,6 +6,7 @@ services:
   # ==================== 注册中心 + 配置中心 ====================
   nacos:
     image: nacos/nacos-server:v2.3.2
+    platform: linux/amd64
     container_name: hc-nacos
     environment:
       MODE: standalone
@@ -29,7 +30,7 @@ services:
     image: bladex/sentinel-dashboard:1.8.7
     container_name: hc-sentinel
     ports:
-      - "8070:8070"
+      - "8070:8858"
     environment:
       - SENTINEL_USERNAME=sentinel
       - SENTINEL_PASSWORD=sentinel
@@ -143,15 +144,17 @@ services:
   # ==================== Spring Cloud Gateway ====================
   gateway:
     build:
-      context: ./services/gateway
-      dockerfile: ../../deploy/docker/Dockerfile.java
+      context: .
+      dockerfile: deploy/docker/Dockerfile.java
+      args:
+        SERVICE_DIR: services/gateway
     container_name: hc-gateway
     environment:
       NACOS_ADDR: nacos:8848
-      SENTINEL_DASHBOARD: sentinel:8070
+      SENTINEL_DASHBOARD: sentinel:8858
       JWT_SECRET: ${JWT_SECRET:-mySecretKeyForJwtTokenGenerationMustBe256BitsLong2024!}
     ports:
-      - "8080:8080"
+      - "7100:7100"
     depends_on:
       - nacos
       - redis
@@ -162,8 +165,10 @@ services:
   # ==================== 商品服务 ====================
   hc-product:
     build:
-      context: ./services/product
-      dockerfile: ../../deploy/docker/Dockerfile.java
+      context: .
+      dockerfile: deploy/docker/Dockerfile.java
+      args:
+        SERVICE_DIR: services/product
     container_name: hc-product
     environment:
       NACOS_ADDR: nacos:8848
@@ -173,9 +178,9 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-admin123}
       ES_HOST: elasticsearch
-      SENTINEL_DASHBOARD: sentinel:8070
+      SENTINEL_DASHBOARD: sentinel:8858
     ports:
-      - "8082:8082"
+      - "7102:7102"
     depends_on:
       - mysql
       - redis
@@ -188,8 +193,10 @@ services:
   # ==================== 订单服务 ====================
   hc-order:
     build:
-      context: ./services/order
-      dockerfile: ../../deploy/docker/Dockerfile.java
+      context: .
+      dockerfile: deploy/docker/Dockerfile.java
+      args:
+        SERVICE_DIR: services/order
     container_name: hc-order
     environment:
       NACOS_ADDR: nacos:8848
@@ -198,9 +205,9 @@ services:
       REDIS_HOST: redis
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-admin123}
-      SENTINEL_DASHBOARD: sentinel:8070
+      SENTINEL_DASHBOARD: sentinel:8858
     ports:
-      - "8084:8084"
+      - "7104:7104"
     depends_on:
       - mysql
       - redis
@@ -213,8 +220,10 @@ services:
   # ==================== 支付服务 ====================
   hc-payment:
     build:
-      context: ./services/payment
-      dockerfile: ../../deploy/docker/Dockerfile.java
+      context: .
+      dockerfile: deploy/docker/Dockerfile.java
+      args:
+        SERVICE_DIR: services/payment
     container_name: hc-payment
     environment:
       NACOS_ADDR: nacos:8848
@@ -224,7 +233,7 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-admin123}
     ports:
-      - "8085:8085"
+      - "7105:7105"
     depends_on:
       - mysql
       - redis
@@ -237,8 +246,10 @@ services:
   # ==================== 用户服务 ====================
   hc-user:
     build:
-      context: ./services/user
-      dockerfile: ../../deploy/docker/Dockerfile.java
+      context: .
+      dockerfile: deploy/docker/Dockerfile.java
+      args:
+        SERVICE_DIR: services/user
     container_name: hc-user
     environment:
       NACOS_ADDR: nacos:8848
@@ -246,7 +257,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-root}
       REDIS_HOST: redis
     ports:
-      - "8081:8081"
+      - "7101:7101"
     depends_on:
       - mysql
       - redis
@@ -258,14 +269,16 @@ services:
   # ==================== 购物车服务 ====================
   hc-cart:
     build:
-      context: ./services/cart
-      dockerfile: ../../deploy/docker/Dockerfile.java
+      context: .
+      dockerfile: deploy/docker/Dockerfile.java
+      args:
+        SERVICE_DIR: services/cart
     container_name: hc-cart
     environment:
       NACOS_ADDR: nacos:8848
       REDIS_HOST: redis
     ports:
-      - "8083:8083"
+      - "7103:7103"
     depends_on:
       - redis
       - nacos

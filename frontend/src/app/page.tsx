@@ -1,9 +1,21 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect } from "react";
+import { useAuthStore } from "@/store/auth";
 
 /**
  * 电商首页 — 商品列表 + 秒杀入口
  */
 export default function HomePage() {
+  const { token, user, fetchMe, logout } = useAuthStore();
+
+  useEffect(() => {
+    if (token && !user) {
+      fetchMe();
+    }
+  }, [token, user, fetchMe]);
+
   // 后续用 react-query 从 /api/product/spu/page 拉取
   const products = [
     { id: 1, name: "iPhone 15 Pro", price: 7999, image: "/placeholder.jpg" },
@@ -22,7 +34,22 @@ export default function HomePage() {
           <div className="flex items-center gap-6">
             <Link href="/cart" className="text-sm hover:text-indigo-600">购物车</Link>
             <Link href="/orders" className="text-sm hover:text-indigo-600">我的订单</Link>
-            <Link href="/login" className="text-sm bg-indigo-600 text-white px-4 py-1.5 rounded-lg">登录</Link>
+            {user ? (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-700">你好，{user.nickname || user.username}</span>
+                <button
+                  onClick={logout}
+                  className="text-sm bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-200"
+                >
+                  退出
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Link href="/register" className="text-sm hover:text-indigo-600">注册</Link>
+                <Link href="/login" className="text-sm bg-indigo-600 text-white px-4 py-1.5 rounded-lg">登录</Link>
+              </div>
+            )}
           </div>
         </nav>
       </header>

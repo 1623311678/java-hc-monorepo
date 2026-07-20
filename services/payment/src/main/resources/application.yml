@@ -1,11 +1,11 @@
 server:
-  port: 7102
+  port: 7105
 spring:
   application:
-    name: hc-product
+    name: hc-payment
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${MYSQL_HOST:mysql}:3306/hc_product?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://${MYSQL_HOST:mysql}:3306/hc_payment?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: ${MYSQL_USER:root}
     password: ${MYSQL_PASSWORD:root}
     type: com.alibaba.druid.pool.DruidDataSource
@@ -32,8 +32,6 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:admin}
     password: ${RABBITMQ_PASSWORD:admin123}
-  elasticsearch:
-    uris: http://${ES_HOST:elasticsearch}:9200
   cloud:
     nacos:
       discovery:
@@ -52,14 +50,3 @@ mybatis-plus:
       logic-delete-field: deleted
       logic-delete-value: 1
       logic-not-delete-value: 0
-seata:
-  enabled: true
-  application-id: hc-product
-  tx-service-group: hc-tx-group
-  service:
-    vgroup-mapping:
-      hc-tx-group: default
-  registry:
-    type: nacos
-    nacos:
-      server-addr: ${NACOS_ADDR:nacos:8848}

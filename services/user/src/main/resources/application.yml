@@ -1,11 +1,11 @@
 server:
-  port: 7102
+  port: 7101
 spring:
   application:
-    name: hc-product
+    name: hc-user
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${MYSQL_HOST:mysql}:3306/hc_product?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://${MYSQL_HOST:mysql}:3306/hc_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: ${MYSQL_USER:root}
     password: ${MYSQL_PASSWORD:root}
     type: com.alibaba.druid.pool.DruidDataSource
@@ -27,13 +27,6 @@ spring:
         config: |
           singleServerConfig:
             address: "redis://${REDIS_HOST:redis}:${REDIS_PORT:6379}"
-  rabbitmq:
-    host: ${RABBITMQ_HOST:rabbitmq}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER:admin}
-    password: ${RABBITMQ_PASSWORD:admin123}
-  elasticsearch:
-    uris: http://${ES_HOST:elasticsearch}:9200
   cloud:
     nacos:
       discovery:
@@ -43,6 +36,11 @@ spring:
     sentinel:
       transport:
         dashboard: ${SENTINEL_DASHBOARD:sentinel:8080}
+
+jwt:
+  secret: ${JWT_SECRET:mySecretKeyForJwtTokenGenerationMustBe256BitsLong2024!}
+  expiration: ${JWT_EXPIRATION:86400000}
+
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   configuration:
@@ -52,14 +50,3 @@ mybatis-plus:
       logic-delete-field: deleted
       logic-delete-value: 1
       logic-not-delete-value: 0
-seata:
-  enabled: true
-  application-id: hc-product
-  tx-service-group: hc-tx-group
-  service:
-    vgroup-mapping:
-      hc-tx-group: default
-  registry:
-    type: nacos
-    nacos:
-      server-addr: ${NACOS_ADDR:nacos:8848}
