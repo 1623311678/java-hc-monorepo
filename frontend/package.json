@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:gateway": "NEXT_PUBLIC_API_BASE=http://localhost:7100 next dev",
     "build": "next build",
     "start": "next start"
   },
