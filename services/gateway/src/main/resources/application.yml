@@ -5,18 +5,16 @@ spring:
   application:
     name: hc-gateway
   config:
-    import: "optional:nacos:"
+    import: "optional:nacos:hc-gateway.yml"
   cloud:
     nacos:
       discovery:
         server-addr: ${NACOS_ADDR:nacos:8848}
-        namespace: ${NACOS_NAMESPACE:dev}
         username: ${NACOS_USERNAME:nacos}
         password: ${NACOS_PASSWORD:nacos}
       config:
         server-addr: ${NACOS_ADDR:nacos:8848}
         file-extension: yml
-        namespace: ${NACOS_NAMESPACE:dev}
         username: ${NACOS_USERNAME:nacos}
         password: ${NACOS_PASSWORD:nacos}
     gateway:
